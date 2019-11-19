@@ -675,8 +675,12 @@ int memcache_text_protocol::write_command_get(const char *key, int key_len, unsi
     assert(key_len > 0);
     int size = 0;
 
+    /*
     size = evbuffer_add_printf(m_write_buf,
         "get %.*s\r\n", key_len, key);
+        */
+    size = evbuffer_add_printf(m_write_buf,
+        "delete %.*s\r\n", key_len, key);
     return size;
 }
 
@@ -767,7 +771,12 @@ int memcache_text_protocol::parse_response(void)
                         free(line);
                     m_response_state = rs_read_end;
                     break;
-                } else {
+                } else if (memcmp(line, "NOT_FOUND", 9) == 0 ||
+                           memcmp(line, "DELETED", 7) == 0) {
+                    m_response_state = rs_read_end;
+                    break;
+                }
+                else {
                     m_last_response.set_error(true);
                     benchmark_debug_log("unknown response: %s\n", line);
                     return -1;
